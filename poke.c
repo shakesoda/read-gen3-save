@@ -807,7 +807,15 @@ void dump_team_info(const uint8_t *base, const uint32_t sec_key) {
 
 int main(int argc, char **argv) {
 	struct stat s;
-	const char *file_name = "Round 3C.sav";
+
+	if (argc <= 1) {
+		fprintf(stderr, "provide a sav file please");
+		exit(-1);
+	}
+
+	printf("loading %s\n", argv[1]);
+
+	const char *file_name = argv[1];
 	int fd = open(file_name, O_RDONLY);
 	check(fd < 0, "open %s failed: %s", file_name, strerror(errno));
 
