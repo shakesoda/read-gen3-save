@@ -82,6 +82,24 @@ void dump_trainer_info(const uint8_t *base) {
 	printf("\n\n");
 }
 
+void dump_game_flags(const uint8_t *base) {
+	enum {
+		FLAG_OFFSET_RS = 0x2a0,
+		FLAG_OFFSET_E = 0x2f0,
+		BADGE_FLAG_RS = 0x807,
+		BADGE_FLAG_E = 0x867
+	};
+
+	uint8_t *start = base + FLAG_OFFSET_E;
+
+	for (int i = 0; i < 8; i++) {
+		uint32_t flag = BADGE_FLAG_E + i;
+		uint8_t val = start[flag >> 3];
+		uint8_t bit = flag & 7;
+		printf("badge %i = %d\n", i, val >> bit & 1);
+	}
+}
+
 enum poke_type {
 	Normal,
 	Water,
@@ -627,13 +645,13 @@ void dump_team_info(const uint8_t *base, const uint32_t sec_key) {
 		decode_text(&info.pokemon[i].nickname, pokemon + NICKNAME, 10);
 		memcpy(&info.pokemon[i].ot_id, pokemon + OT_ID, 4);
 		decode_text(info.pokemon[i].ot_name, pokemon + OT_NAME, 7);
-		printf("%s (OT: %s)\n", info.pokemon[i].nickname, info.pokemon[i].ot_name);
+		//printf("%s (OT: %s)\n", info.pokemon[i].nickname, info.pokemon[i].ot_name);
 		memcpy(&info.pokemon[i].level, pokemon + LEVEL, 1);
-		printf("lv %d\n", info.pokemon[i].level);
+		//printf("lv %d\n", info.pokemon[i].level);
 		//memcpy(&info.pokemon[i].pokerus, pokemon + POKERUS, 1);
 		//printf("pokerus remaining %d\n", info.pokemon[i].pokerus);
 		union {
-			uint8_t data[48];
+			uint32_t data[12];
 			struct {
 				uint8_t data_g[12];
 				uint8_t data_a[12];
@@ -788,18 +806,26 @@ void dump_team_info(const uint8_t *base, const uint32_t sec_key) {
 		}
 
 		uint32_t key = info.pokemon[i].ot_id ^ info.pokemon[i].personality;
-		uint32_t *u32_data = raw_data.data;
 		for (int i = 0; i < 12; i++) {
-			u32_data[i] ^= key;
+			raw_data.data[i] ^= key;
 		}
+
+		//printf("DUMP\n\n\n");
+		//for (int i = 0; i < 12; i++) {
+		//	uint32_t *p = pokemon + TRICKY_DATA + i * 4;
+		//	printf("%08x\n", key ^ (*p));
+		//}
+		//printf("DUMP\n\n");
+
+		//printf("%08x %08x %08x (xor %08x)\n", raw_data.data[0], raw_data.data[1], raw_data.data[2], key);
 
 		uint16_t species;
 		memcpy(&species, raw_data.data_g, 2);
 
 		struct Pokemon poke = pokemon_lut[species];
 
-		printf("species %d (%04x), should be a %s\n", species, species, poke.name);
-		printf("\n");
+		printf("species %d (%04x), %s should be a %s order %d, personality %d\n", species, species, info.pokemon[i].nickname, poke.name, order, info.pokemon[i].personality);
+		//printf("\n");
 	}
 
 	printf("money $%d\n", info.money ^ sec_key);
@@ -906,6 +932,7 @@ int main(int argc, char **argv) {
 
 	dump_trainer_info(save + offsets.trainer_info);
 	dump_team_info(save + offsets.team_items, sec_key);
+	dump_game_flags(save + offsets.game_state);
 
 	return 0;
 }
